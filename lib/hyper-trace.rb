@@ -1,6 +1,5 @@
-puts "***************** loading mr hyper trace ***************************"
-
 if RUBY_ENGINE=='opal'
-  puts "***************** loading mr hyper trace ***************************"
   require 'hyper_trace/hyper_trace.rb'
+else
+  Opal.append_path File.expand_path('../', __FILE__).untaint
 end

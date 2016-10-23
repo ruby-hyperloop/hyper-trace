@@ -1,5 +1,6 @@
 class Class
   def hyper_trace(opts = {}, &block)
+    return unless React::IsomorphicHelpers.on_opal_client?
     HyperTrace.hyper_trace(self, opts, &block)
   end
   alias hypertrace hyper_trace
@@ -17,11 +18,11 @@ end
 module HyperTrace
 
   class Config
-    def initialize(opts, &block)
+    def initialize(global = nil, opts, &block)
       @opts = {}
       [:break_on_enter?, :break_on_exit?, :break_on_enter, :break_on_exit, :instrument].each do |method|
         send(method, opts[method]) if opts[method]
-      end
+      end unless global == :off
       instance_eval(&block) if block
     end
     attr_reader :opts

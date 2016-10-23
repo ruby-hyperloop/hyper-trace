@@ -1,8 +1,62 @@
-# Hyper::Trace
+# HyperTrace
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/hyper/trace`. To experiment with that code, run `bin/console` for an interactive prompt.
+Method tracing and conditional break points for [Opal](http://opalrb.org/) and [Hyperloop](http://ruby-hyperloop.io) debug.
 
-TODO: Delete this and the text above, and describe your gem
+Typically you are going to use this in Capybara or Opal-RSpec examples that you are debugging.
+
+HyperTrace adds a `hypertrace` method to all classes that you will use to switch on tracing and break points.
+
+For example:
+
+```ruby
+SomeClass.hypertrace instrument: :all
+```
+
+Will instrument all methods in `SomeClass` and you will get a trace like this:
+
+[trace example]!(...)
+
+The trace log uses the javascript console grouping mechanism, so you can explore in detail the args, return values and state of the instance as each method executes.
+
+instead of `:all` you can specify a single method, or an array of methods.  Use the array notation if you happen to want to trace just the method `:all`.
+
+#### Breakpoints
+
+```ruby
+SomeClass.hypertrace break_on_enter: :foo
+```
+
+Will break on entry to `SomeClass#foo` and `self` will be set the instance. The equivalent `break_on_exit` method will also store the result in a javascript variable called `RESULT`.
+
+#### Conditional Breakpoints
+
+```ruby
+SomeClass.hypertrace break_on_enter?: {foo: ->(arg1, arg2 ...) { ... }}
+```
+
+The proc will be called before each call to `SomeClass#foo`, and any args passed to foo will be matched to the args, and the proc's instance will be set the foo's instance.  If the proc returns a falsy value the breakpoint will be skipped.
+
+#### DSL
+
+You can also use a simple DSL:
+
+```ruby
+SomeClass.hypertrace do
+  instrument      [:foo, :bar]
+  break_on_exit   :baz
+  break_on_enter? :ralph do |p1, p2|
+    # executes with self set the instance, p1, p2 will be the
+    # first two args passed to ralph
+    p1 == p2 # break if p1 == p2
+  end
+end
+```
+
+#### Switching it off
+
+```ruby
+SomeClass.hypertrace :off
+```
 
 ## Installation
 
@@ -20,9 +74,7 @@ Or install it yourself as:
 
     $ gem install hyper-trace
 
-## Usage
-
-TODO: Write usage instructions here
+Once installed add `require 'hyper-trace'` to your application or component manifest file.  This gem works best if you are using Capybara or opal rspec, in which case you can reference the gem in the test application's manifest.
 
 ## Development
 
@@ -32,10 +84,17 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/hyper-trace. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org) code of conduct.
+This is a very simple work in progress.  Any and all help is requested.  Things to do:
 
+1. Add special handling for react components
+2. Conditional tracing
+2. Add ability to specify `to_s` and `inspect` methods for use during tracing
+3. Add ability to specify `HyperTrace` delegator classes
+4. Add ability to specify additional methods to be called when putting together an instance's data
+5. Add some tests
+
+Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/hyper-trace. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org) code of conduct.
 
 ## License
 
 The gem is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).
-
