@@ -137,8 +137,14 @@ module HyperTrace
         `console.group(#{" #{name}(...)#{instance_tag(instance)}"})`
         params = method.parameters
         `console.groupCollapsed(#{"args:"})`
-        args.each_with_index do |arg, i|
-          arg_name = params[i][1]
+        params.each_with_index do |param_spec, i|
+          arg_name = param_spec[1]
+          if arg_name == '$a_rest'
+            arg_name = '*'
+            arg = args[i..-1]
+          else
+            arg = args[i]
+          end
           if safe_i(arg).length > 30 || show_js_object(arg)
             `console.groupCollapsed(#{"#{arg_name}: #{safe_s(arg)}"[0..29]})`
             puts safe_i(arg)
