@@ -36,6 +36,14 @@ SomeClass.hypertrace break_on_enter?: {foo: ->(arg1, arg2 ...) { ... }}
 
 The proc will be called before each call to `SomeClass#foo`, and any args passed to foo will be matched to the args, and the proc's instance will be set the foo's instance.  If the proc returns a falsy value the breakpoint will be skipped.
 
+#### Instrumenting Class methods
+
+If the first argument is `:class` hypertrace will instrument the class methods.
+
+```ruby
+SomeClass.hypertrace :class instrument: :some_class_method
+```
+
 #### DSL
 
 You can also use a simple DSL:
@@ -55,7 +63,18 @@ end
 #### Switching it off
 
 ```ruby
-SomeClass.hypertrace :off
+SomeClass.hypertrace instrument: :none
+```
+
+#### Inside of classes
+
+Of course you can switch hypertrace on inside of your classes for quick debugging:
+
+```ruby
+SomeClass
+  hypertrace instrument: :all
+  ...
+end
 ```
 
 ## Installation

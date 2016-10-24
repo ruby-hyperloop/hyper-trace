@@ -1,7 +1,7 @@
 class Class
-  def hyper_trace(opts = {}, &block)
+  def hyper_trace(*args, &block)
     return unless React::IsomorphicHelpers.on_opal_client?
-    HyperTrace.hyper_trace(self, opts, &block)
+    HyperTrace.hyper_trace(self, *args, &block)
   end
   alias hypertrace hyper_trace
 end
@@ -18,14 +18,19 @@ end
 module HyperTrace
 
   class Config
-    def initialize(global = nil, opts, &block)
+    def initialize(klass, instrument_class, opts, &block)
+      @klass = klass
       @opts = {}
-      [:break_on_enter?, :break_on_exit?, :break_on_enter, :break_on_exit, :instrument].each do |method|
+      @instrument_class = instrument_class
+      [:break_on_enter?, :break_on_entry?, :break_on_exit?, :break_on_enter, :break_on_entry, :break_on_exit, :instrument].each do |method|
         send(method, opts[method]) if opts[method]
-      end unless global == :off
+      end unless opts[:instrument] == :none
       instance_eval(&block) if block
     end
-    attr_reader :opts
+    def instrument_class?
+      @instrument_class
+    end
+    attr_reader :klass
     def instrument(opt)
       return if @opts[:instrument] == :all
       if opt == :all
@@ -40,6 +45,7 @@ module HyperTrace
     def break_on_enter(methods)
       [*methods].each { |method| break_on_enter?(method) { true } }
     end
+    alias break_on_entry break_on_enter
     def break_on_exit?(method, &block)
       @opts[:break_on_exit?] ||= {}
       @opts[:break_on_exit?][method] = block
@@ -50,27 +56,41 @@ module HyperTrace
       @opts[:break_on_enter?][method] = block
       instrument(method)
     end
+    alias break_on_entry? break_on_enter
+    def [](opt)
+      @opts[opt]
+    end
   end
 
 
   class << self
-    def hyper_trace(klass, opts, &block)
+    def hyper_trace(klass, *args, &block)
+      if args.count == 0
+        opts = { instrument: :all }
+        instrument_class = false
+      elsif args.first == :class
+        opts = args[1] || {}
+        instrument_class = true
+      else
+        opts = args.last || {}
+        instrument_class = false
+      end
       begin
         opts.is_a? Hash
       rescue Exception
         opts = Hash.new(opts)
       end
-      opts = Config.new(opts, &block).opts
-      if opts[:exclude]
+      config = Config.new(klass, instrument_class, opts, &block)
+      if config[:exclude]
         exclusions[:instrumentation][klass] << opts[:exclude]
       else
-        instrumentation_off(klass)
-        selected_methods = if opts[:instrument] == :all
-          all_methods(klass)
+        instrumentation_off(config)
+        selected_methods = if config[:instrument] == :all
+          all_methods(config)
         else
-          Set.new opts[:instrument]
+          Set.new config[:instrument]
         end
-        selected_methods.each { |method| instrument_method(klass, method, opts) }
+        selected_methods.each { |method| instrument_method(method, config) }
       end
     end
 
@@ -78,23 +98,47 @@ module HyperTrace
       @exclusions ||= Hash.new { |h, k| h[k] = Hash.new { |h, k| h[k] = Set.new } }
     end
 
-    def instrumentation_off(klass)
-      klass.instance_methods.grep(/^__hyper_trace_pre_.+$/).each do |method|
-        klass.class_eval { alias_method method.gsub(/^__hyper_trace_pre_/, ''), method }
-      end
-    end
-
-    def all_methods(klass)
-      Set.new(klass.instance_methods.grep(/^(?!__hyper_trace_)/))-Set.new(Class.methods + Object.methods)-exclusions[klass]
-    end
-
-    def instrument_method(klass, method, opts)
-      unless klass.method_defined? "__pre_hyper_trace_#{method}"
-        klass.class_eval do
-          alias_method "__hyper_trace_pre_#{method}", method
+    def instrumentation_off(config)
+      if config.instrument_class?
+        config.klass.methods.grep(/^__hyper_trace_pre_.+$/).each do |method|
+          config.klass.class_eval do
+            class << self
+              alias_method method.gsub(/^__hyper_trace_pre_/, ''), method
+            end
+          end
+        end
+      else
+        config.klass.instance_methods.grep(/^__hyper_trace_pre_.+$/).each do |method|
+          config.klass.class_eval { alias_method method.gsub(/^__hyper_trace_pre_/, ''), method }
         end
       end
-      add_hyper_trace_method(klass, method, opts)
+    end
+
+    def all_methods(config)
+      if config.instrument_class?
+        Set.new(config.klass.methods.grep(/^(?!__hyper_trace_)/))-Set.new(Class.methods + Object.methods)-exclusions[config.klass]
+      else
+        Set.new(config.klass.instance_methods.grep(/^(?!__hyper_trace_)/))-Set.new(Class.methods + Object.methods)-exclusions[config.klass]
+      end
+    end
+
+    def instrument_method(method, config)
+      `console.log('instrument_method')`
+      if config.instrument_class?
+        config.klass.class_eval do
+          class << self
+            alias_method "__hyper_trace_pre_#{method}", method unless method_defined? "__pre_hyper_trace_#{method}"
+          end
+        end
+        add_hyper_trace_method(method, config)
+      else
+        unless config.klass.method_defined? "__pre_hyper_trace_#{method}"
+          config.klass.class_eval do
+            alias_method "__hyper_trace_pre_#{method}", method
+          end
+        end
+      end
+      add_hyper_trace_method(method, config)
     end
 
     def formatting?
@@ -189,9 +233,6 @@ module HyperTrace
         `console.group(#{"returns: #{safe_i(result)}"})`
       end
       `console.groupEnd()`
-    rescue Exception => e
-      debugger
-      nil
     ensure
       @formatting = false
     end
@@ -209,8 +250,8 @@ module HyperTrace
       @formatting = false
     end
 
-    def should_break?(location, options, name, args, instance, result)
-      breaker = options["break_on_#{location}?"]
+    def should_break?(location, config, name, args, instance, result)
+      breaker = config["break_on_#{location}?"]
       breaker &&= breaker[name] || breaker[:all]
       return unless breaker
       args = [result, *args] if location == 'exit'
@@ -220,8 +261,8 @@ module HyperTrace
       @formatting = false
     end
 
-    def breakpoint(location, options, klass, name, args, instance, result = nil)
-      if should_break? location, options, name, args, instance, result
+    def breakpoint(location, config, name, args, instance, result = nil)
+      if should_break? location, config, name, args, instance, result
         method = instance.method("__hyper_trace_pre_#{name}")
         fn_def = ['RESULT']
         fn_def += method.parameters.collect { |p| p[1] }
@@ -232,8 +273,9 @@ module HyperTrace
       end
     end
 
-    def add_hyper_trace_method(klass, method, opts)
-      klass.define_method method do |*args, &block|
+    def add_hyper_trace_method(method, config)
+      def_method = config.instrument_class? ? :define_singleton_method : :define_method
+      config.klass.send(def_method, method) do |*args, &block|
         block_string = ' { ... }' if block
         if HyperTrace.formatting?
           begin
@@ -245,10 +287,10 @@ module HyperTrace
           begin
             HyperTrace.format_head(self, method, args)
             HyperTrace.format_instance(self)
-            HyperTrace.breakpoint(:enter, opts, klass, method, args, self)
+            HyperTrace.breakpoint(:enter, config, method, args, self)
             result = send "__hyper_trace_pre_#{method}", *args, &block
             HyperTrace.format_result(result)
-            HyperTrace.breakpoint(:exit, opts, klass, method, args, self, result)
+            HyperTrace.breakpoint(:exit, config, method, args, self, result)
             result
           rescue Exception => e
             HyperTrace.format_exception(e)
