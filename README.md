@@ -14,7 +14,7 @@ SomeClass.hypertrace instrument: :all
 
 Will instrument all methods in `SomeClass` and you will get a trace like this:
 
-[trace example]!(...)
+<img width="952" alt="screen shot 2016-10-22 at 11 08 56 pm" src="https://cloud.githubusercontent.com/assets/63146/19624133/48098fce-98b6-11e6-9198-cc5eae836ccf.png">
 
 The trace log uses the javascript console grouping mechanism, so you can explore in detail the args, return values and state of the instance as each method executes.
 
