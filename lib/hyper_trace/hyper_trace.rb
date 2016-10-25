@@ -193,33 +193,35 @@ module HyperTrace
       end
     end
 
-    def format_head(instance, name, args)
+    def format_head(instance, name, args, &block)
       @formatting = true
       method = instance.method("__hyper_trace_pre_#{name}")
       if args.any?
-        `console.group(#{" #{name}(...)#{instance_tag(instance)}"})`
-        params = method.parameters
-        `console.groupCollapsed(#{"args:"})`
-        params.each_with_index do |param_spec, i|
-          arg_name = param_spec[1]
-          if arg_name == '$a_rest'
-            arg_name = '*'
-            arg = args[i..-1]
-          else
-            arg = args[i]
+        group(" #{name}(...)#{instance_tag(instance)}") do
+          params = method.parameters
+          group("args:", collapsed: true) do
+            params.each_with_index do |param_spec, i|
+              arg_name = param_spec[1]
+              if arg_name == '$a_rest'
+                arg_name = '*'
+                arg = args[i..-1]
+              else
+                arg = args[i]
+              end
+              if safe_i(arg).length > 30 || show_js_object(arg)
+                group "#{arg_name}: #{safe_s(arg)}"[0..29], collapsed: true do
+                  puts safe_i(arg)
+                  log arg if show_js_object(arg)
+                end
+              else
+                group "#{arg_name}: #{safe_i(arg)}"
+              end
+            end
           end
-          if safe_i(arg).length > 30 || show_js_object(arg)
-            `console.groupCollapsed(#{"#{arg_name}: #{safe_s(arg)}"[0..29]})`
-            puts safe_i(arg)
-            `console.log(#{arg})` if show_js_object(arg)
-          else
-            `console.group(#{"#{arg_name}: #{safe_i(arg)}"})`
-          end
-          `console.groupEnd()`
+          yield
         end
-        `console.groupEnd()`
       else
-        `console.group(#{" #{name}()#{instance_tag(instance)}"})`
+        group " #{name}()#{instance_tag(instance)}", &block
       end
     ensure
       @formatting = false
@@ -241,15 +243,11 @@ module HyperTrace
     end
 
     def format_instance_internal(instance)
-      return if @formatting
-      @formatting = true
       if instance.respond_to? :hypertrace_format_instance
         instance.hypertrace_format_instance(self)
       else
         format_instance(instance, instance.instance_variables)
       end
-    ensure
-      @formatting = false
     end
 
     def format_instance(instance, filter = nil, &block)
@@ -259,42 +257,39 @@ module HyperTrace
           instance.instance_variables
         end
       return if filtered_instance_variables.empty? && block.nil?
-      `console.groupCollapsed(#{"self:#{instance_tag(instance,' ')}"})`
-      puts safe_i(instance) unless safe_i(instance).length < 40
-      filtered_instance_variables.each do |iv|
-        val = safe_i(instance.instance_variable_get(iv))
-        `console.groupCollapsed(#{"#{iv}: #{val[0..10]}"})`
-        puts val
-        `console.log(#{instance.instance_variable_get(iv)})`
-        `console.groupEnd()`
+      group "self:#{instance_tag(instance,' ')}", collapsed: true do
+        puts safe_i(instance) unless safe_i(instance).length < 40
+        filtered_instance_variables.each do |iv|
+          val = safe_i(instance.instance_variable_get(iv))
+          group "#{iv}: #{val[0..10]}", collapsed: true do
+            puts val
+            log instance.instance_variable_get(iv)
+          end
+        end
+        yield if block
       end
-      yield if block
-      `console.groupEnd()`
     end
 
     def format_result(result)
-      @formatting = true
       if safe_i(result).length > 40 || show_js_object(result)
-        `console.groupCollapsed(#{"returns: #{safe_s(result)}"[0..40]})`
-        puts safe_i(result)
-        `console.log(#{result})` if show_js_object(result)
+        group "returns: #{safe_s(result)}"[0..40], collapsed: true do
+          puts safe_i(result)
+          log result if show_js_object(result)
+        end
       else
-        `console.group(#{"returns: #{safe_i(result)}"})`
+        group "returns: #{safe_i(result)}"
       end
-      `console.groupEnd()`
-    ensure
-      @formatting = false
     end
 
     def format_exception(result)
       @formatting = true
       if safe_i(result).length > 40
-        `console.groupCollapsed(#{"raised: #{safe_s(result)}"[0..40]})`
-        puts safe_i(result)
+        group "raised: #{safe_s(result)}"[0..40], collapsed: true do
+          puts safe_i(result)
+        end
       else
-        `console.group(#{"raised: #{safe_i(result)}"})`
+        group "raised: #{safe_i(result)}"
       end
-      `console.groupEnd()`
     ensure
       @formatting = false
     end
@@ -304,10 +299,7 @@ module HyperTrace
       breaker &&= breaker[name] || breaker[:all]
       return unless breaker
       args = [result, *args] if location == 'exit'
-      @formatting = true
       instance.instance_exec(*args, &breaker)
-    ensure
-      @formatting = false
     end
 
     def breakpoint(location, config, name, args, instance, result = nil)
@@ -322,6 +314,14 @@ module HyperTrace
       end
     end
 
+    def call_original(instance, method, *args, &block)
+      @formatting = false
+      instance.send "__hyper_trace_pre_#{method}", *args, &block
+    ensure
+      @formatting = true
+    end
+
+
     def add_hyper_trace_method(method, config)
       def_method = config.instrument_class? ? :define_singleton_method : :define_method
       config.klass.send(def_method, method) do |*args, &block|
@@ -334,19 +334,18 @@ module HyperTrace
           end
         else
           begin
-            HyperTrace.format_head(self, method, args)
-            HyperTrace.format_instance_internal(self)
-            HyperTrace.breakpoint(:enter, config, method, args, self)
-            result = send "__hyper_trace_pre_#{method}", *args, &block
-            HyperTrace.format_result(result)
-            HyperTrace.breakpoint(:exit, config, method, args, self, result)
-            result
+            HyperTrace.format_head(self, method, args) do
+              HyperTrace.format_instance_internal(self)
+              HyperTrace.breakpoint(:enter, config, method, args, self)
+              result = HyperTrace.call_original self, method, *args, &block
+              HyperTrace.format_result(result)
+              HyperTrace.breakpoint(:exit, config, method, args, self, result)
+              result
+            end
           rescue Exception => e
             HyperTrace.format_exception(e)
             debugger unless HyperTrace.exclusions[self.class][:rescue].include? :method
             raise e
-          ensure
-            `console.groupEnd()` rescue nil
           end
         end
       end

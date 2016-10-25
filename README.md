@@ -68,14 +68,19 @@ SomeClass.hypertrace instrument: :none
 
 #### Inside of classes
 
-Of course you can switch hypertrace on inside of your classes for quick debugging:
+Of course you can switch hypertrace on inside of your classes for quick debugging.  Just remember that hypertrace applies
+only to currently defined methods.
 
 ```ruby
 SomeClass
-  hypertrace instrument: :all
   ...
+  hypertrace instrument: :all
 end
 ```
+
+#### Works with Hyper-React (Reactrb)
+
+If you hypertrace a React Component class you will get information on the component lifecycle, and the component state will include react state variables, and params (props) as well as normal instance variables.
 
 ## Installation
 
@@ -95,6 +100,29 @@ Or install it yourself as:
 
 Once installed add `require 'hyper-trace'` to your application or component manifest file.  This gem works best if you are using Capybara or opal rspec, in which case you can reference the gem in the test application's manifest.
 
+
+## Custom Class Definitions
+
+If class instance responds to `hypertrace_format_instance` then that method will be called to format the state information.
+
+The method will be passed a hypertrace context object that will respond to the following methods:
+
++ `format_instance(instance_vars = nil, &block)`  
+log the default instance header information.  If instance_vars is nil then all instance vars will be printed.  Otherwise instance_vars should be an array of the instance vars to display.  The block will be executed to provide other details following the instance vars.
++ `safe_i(object)`:  
+call inspect on an object will work even if the object is a native js object.
++ `safe_s(object)`:  
+call to_s on an object safely
++ `log(s)`  
+print a s to the log, nested at the current grouping level
++ `group(header, collapsed: false, &block)`  
+create a new nesting group.  If collapsed is true then the group will be initially closed.  If block is present it will provide the contents of the group.
+
+If the method `hypertrace_exclusions` is defined, it can return an array of methods names that will be not
+be shown unless explicitly named.
+
+For more details see the react_trace.rb module in this gem.
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
@@ -105,11 +133,9 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 This is a very simple work in progress.  Any and all help is requested.  Things to do:
 
-1. Add special handling for react components
 2. Conditional tracing
 2. Add ability to specify `to_s` and `inspect` methods for use during tracing
 3. Add ability to specify `HyperTrace` delegator classes
-4. Add ability to specify additional methods to be called when putting together an instance's data
 5. Add some tests
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/hyper-trace. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org) code of conduct.
