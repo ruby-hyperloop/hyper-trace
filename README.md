@@ -62,8 +62,7 @@ gem 'hyper-trace'
         
 4. Add `require 'hyper-trace'` to your application or component manifest file.
 
-5. Follow the Hyper-trace documentation
-
+5. Follow the Hyper-trace documentation:
     * [Hyper-trace documentation](http://ruby-hyperloop.io/tools/hypertrace/)
     * [Hyperloop Guides](http://ruby-hyperloop.io/docs/architecture)
     * [Hyperloop Tutorial](http://ruby-hyperloop.io/tutorials)
