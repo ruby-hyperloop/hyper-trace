@@ -1,145 +1,82 @@
-# HyperTrace
+<div class="githubhyperloopheader">
 
-Method tracing and conditional break points for [Opal](http://opalrb.org/) and [Hyperloop](http://ruby-hyperloop.io) debug.
+<p align="center">
+
+<a href="http://ruby-hyperloop.io/" alt="Hyperloop" title="Hyperloop">
+<img width="350px" src="http://ruby-hyperloop.io/images/hyperloop-github-logo.png">
+</a>
+
+</p>
+
+<h2 align="center">The Complete Isomorphic Ruby Framework</h2>
+
+<br>
+
+<a href="http://ruby-hyperloop.io/" alt="Hyperloop" title="Hyperloop">
+<img src="http://ruby-hyperloop.io/images/githubhyperloopbadge.png">
+</a>
+
+<a href="https://gitter.im/ruby-hyperloop/chat" alt="Gitter chat" title="Gitter chat">
+<img src="http://ruby-hyperloop.io/images/githubgitterbadge.png">
+</a>
+
+[![Gem Version](https://badge.fury.io/rb/hyper-trace.svg)](https://badge.fury.io/rb/hyper-trace)
+
+<p align="center">
+<img src="http://ruby-hyperloop.io/images/HyperTracer.png" width="100" alt="Hyper-trace">
+</p>
+
+</div>
+
+## Hyper-Trace GEM is part of Hyperloop GEMS family
+
+Build interactive Web applications quickly. Hyperloop encourages rapid development with clean, pragmatic design. With developer productivity as our highest goal, Hyperloop takes care of much of the hassle of Web development, so you can focus on innovation and delivering end-user value.
+
+One language. One model. One set of tests. The same business logic and domain models running on the clients and the server. Hyperloop is fully integrated with Rails and also gives you unfettered access to the complete universe of JavaScript libraries (including React) from within your Ruby code. Hyperloop lets you build beautiful interactive user interfaces in Ruby.
+
+Everything has a place in our architecture. Components deliver interactive user experiences, Operations encapsulate business logic, Models magically synchronize data between clients and servers, Policies govern authorization and Stores hold local state. 
+
+**Hyper-Trace** brings a method tracing and conditional break points for [Opal](http://opalrb.org/) and [Hyperloop](http://ruby-hyperloop.io) debug.
 
 Typically you are going to use this in Capybara or Opal-RSpec examples that you are debugging.
 
 HyperTrace adds a `hypertrace` method to all classes that you will use to switch on tracing and break points.
 
-For example:
+## Getting Started
 
+1. Update your Gemfile:
+        
 ```ruby
-SomeClass.hypertrace instrument: :all
-```
+#Gemfile
 
-Will instrument all methods in `SomeClass` and you will get a trace like this:
-
-<img width="952" alt="screen shot 2016-10-22 at 11 08 56 pm" src="https://cloud.githubusercontent.com/assets/63146/19624133/48098fce-98b6-11e6-9198-cc5eae836ccf.png">
-
-The trace log uses the javascript console grouping mechanism, so you can explore in detail the args, return values and state of the instance as each method executes.
-
-instead of `:all` you can specify a single method, or an array of methods.  Use the array notation if you happen to want to trace just the method `:all`.
-
-#### Breakpoints
-
-```ruby
-SomeClass.hypertrace break_on_enter: :foo
-```
-
-Will break on entry to `SomeClass#foo` and `self` will be set the instance. The equivalent `break_on_exit` method will also store the result in a javascript variable called `RESULT`.
-
-#### Conditional Breakpoints
-
-```ruby
-SomeClass.hypertrace break_on_enter?: {foo: ->(arg1, arg2 ...) { ... }}
-```
-
-The proc will be called before each call to `SomeClass#foo`, and any args passed to foo will be matched to the args, and the proc's instance will be set the foo's instance.  If the proc returns a falsy value the breakpoint will be skipped.
-
-#### Instrumenting Class methods
-
-If the first argument is `:class` hypertrace will instrument the class methods.
-
-```ruby
-SomeClass.hypertrace :class instrument: :some_class_method
-```
-
-#### DSL
-
-You can also use a simple DSL:
-
-```ruby
-SomeClass.hypertrace do
-  instrument      [:foo, :bar]
-  break_on_exit   :baz
-  break_on_enter? :ralph do |p1, p2|
-    # executes with self set the instance, p1, p2 will be the
-    # first two args passed to ralph
-    p1 == p2 # break if p1 == p2
-  end
-end
-```
-
-#### Switching it off
-
-```ruby
-SomeClass.hypertrace instrument: :none
-```
-
-#### Inside of classes
-
-Of course you can switch hypertrace on inside of your classes for quick debugging.  Just remember that hypertrace applies
-only to currently defined methods.
-
-```ruby
-SomeClass
-  ...
-  hypertrace instrument: :all
-end
-```
-
-#### Works with Hyper-React (Reactrb)
-
-If you hypertrace a React Component class you will get information on the component lifecycle, and the component state will include react state variables, and params (props) as well as normal instance variables.
-
-## Installation
-
-Add this line to your application's Gemfile:
-
-```ruby
 gem 'hyper-trace'
 ```
 
-And then execute:
+2. At the command prompt, update your bundle :
 
-    $ bundle
+        $ bundle update
 
-Or install it yourself as:
+3. Run the gem install generator:
 
-    $ gem install hyper-trace
+        $ gem install hyper-trace
+        
+4. Add `require 'hyper-trace'` to your application or component manifest file.
 
-Once installed add `require 'hyper-trace'` to your application or component manifest file.  This gem works best if you are using Capybara or opal rspec, in which case you can reference the gem in the test application's manifest.
+5. Follow the Hyper-trace documentation
+    * [Hyper-trace documentation](http://ruby-hyperloop.io/tools/hypertrace/)
+    * [Hyperloop Guides](http://ruby-hyperloop.io/docs/architecture)
+    * [Hyperloop Tutorial](http://ruby-hyperloop.io/tutorials)
 
+## Community
 
-## Custom Class Definitions
+#### Getting Help
+Please **do not post** usage questions to GitHub Issues. For these types of questions use our [Gitter chatroom](https://gitter.im/ruby-hyperloop/chat) or [StackOverflow](http://stackoverflow.com/questions/tagged/hyperloop).
 
-If class instance responds to `hypertrace_format_instance` then that method will be called to format the state information.
-
-The method will be passed a hypertrace context object that will respond to the following methods:
-
-+ `format_instance(instance_vars = nil, &block)`  
-log the default instance header information.  If instance_vars is nil then all instance vars will be printed.  Otherwise instance_vars should be an array of the instance vars to display.  The block will be executed to provide other details following the instance vars.
-+ `safe_i(object)`:  
-call inspect on an object will work even if the object is a native js object.
-+ `safe_s(object)`:  
-call to_s on an object safely
-+ `log(s)`  
-print a s to the log, nested at the current grouping level
-+ `group(header, collapsed: false, &block)`  
-create a new nesting group.  If collapsed is true then the group will be initially closed.  If block is present it will provide the contents of the group.
-
-If the method `hypertrace_exclusions` is defined, it can return an array of methods names that will be not
-be shown unless explicitly named.
-
-For more details see the react_trace.rb module in this gem.
-
-## Development
-
-After checking out the repo, run `bin/setup` to install dependencies. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
-
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
-
-## Contributing
-
-This is a very simple work in progress.  Any and all help is requested.  Things to do:
-
-2. Conditional tracing
-2. Add ability to specify `to_s` and `inspect` methods for use during tracing
-3. Add ability to specify `HyperTrace` delegator classes
-5. Add some tests
-
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/hyper-trace. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [Contributor Covenant](http://contributor-covenant.org) code of conduct.
+#### Submitting Bugs and Enhancements
+[GitHub Issues](https://github.com/ruby-hyperloop/hyperloop/issues) is for suggesting enhancements and reporting bugs. Before submiting a bug make sure you do the following:
+* Check out our [contributing guide](https://github.com/ruby-hyperloop/hyperloop/blob/master/CONTRIBUTING.md) for info on our release cycle.
 
 ## License
 
-The gem is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).
+Hyperloop is released under the [MIT License](http://www.opensource.org/licenses/MIT).
+
