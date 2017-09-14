@@ -2,8 +2,8 @@
 
 <p align="center">
 
-<a href="http://ruby-hyperloop.io/" alt="Hyperloop" title="Hyperloop">
-<img width="350px" src="http://ruby-hyperloop.io/images/hyperloop-github-logo.png">
+<a href="http://ruby-hyperloop.org/" alt="Hyperloop" title="Hyperloop">
+<img width="350px" src="http://ruby-hyperloop.org/images/hyperloop-github-logo.png">
 </a>
 
 </p>
@@ -12,18 +12,18 @@
 
 <br>
 
-<a href="http://ruby-hyperloop.io/" alt="Hyperloop" title="Hyperloop">
-<img src="http://ruby-hyperloop.io/images/githubhyperloopbadge.png">
+<a href="http://ruby-hyperloop.org/" alt="Hyperloop" title="Hyperloop">
+<img src="http://ruby-hyperloop.org/images/githubhyperloopbadge.png">
 </a>
 
 <a href="https://gitter.im/ruby-hyperloop/chat" alt="Gitter chat" title="Gitter chat">
-<img src="http://ruby-hyperloop.io/images/githubgitterbadge.png">
+<img src="http://ruby-hyperloop.org/images/githubgitterbadge.png">
 </a>
 
 [![Gem Version](https://badge.fury.io/rb/hyper-trace.svg)](https://badge.fury.io/rb/hyper-trace)
 
 <p align="center">
-<img src="http://ruby-hyperloop.io/images/HyperTracer.png" width="100" alt="Hyper-trace">
+<img src="http://ruby-hyperloop.org/images/HyperTracer.png" width="100" alt="Hyper-trace">
 </p>
 
 </div>
@@ -36,7 +36,7 @@ One language. One model. One set of tests. The same business logic and domain mo
 
 Everything has a place in our architecture. Components deliver interactive user experiences, Operations encapsulate business logic, Models magically synchronize data between clients and servers, Policies govern authorization and Stores hold local state. 
 
-**Hyper-Trace** brings a method tracing and conditional break points for [Opal](http://opalrb.org/) and [Hyperloop](http://ruby-hyperloop.io) debug.
+**Hyper-Trace** brings a method tracing and conditional break points for [Opal](http://opalrb.org/) and [Hyperloop](http://ruby-hyperloop.org) debug.
 
 Typically you are going to use this in Capybara or Opal-RSpec examples that you are debugging.
 
@@ -64,9 +64,9 @@ gem 'hyper-trace'
 
 5. Follow the Hyper-trace documentation:
 
-    * [Hyper-trace documentation](http://ruby-hyperloop.io/tools/hypertrace/)
-    * [Hyperloop Guides](http://ruby-hyperloop.io/docs/architecture)
-    * [Hyperloop Tutorial](http://ruby-hyperloop.io/tutorials)
+    * [Hyper-trace documentation](http://ruby-hyperloop.org/tools/hypertrace/)
+    * [Hyperloop Guides](http://ruby-hyperloop.org/docs/architecture)
+    * [Hyperloop Tutorial](http://ruby-hyperloop.org/tutorials)
 
 ## Community
 
